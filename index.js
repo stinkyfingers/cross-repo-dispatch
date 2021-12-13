@@ -2,24 +2,30 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const fetch = require('node-fetch');
 
+try {
+  const owner = core.getInput('owner');
+  const repo = core.getInput('repo');
+  const pat = core.getInput('pat');
+  const sha = core.getInput('sha');
 
-async function run() {
-  try {
-    const owner = core.getInput('owner');
-    const repo = core.getInput('repo');
-    const pat = core.getInput('pat');
-    const sha = core.getInput('sha');
+  const req = http.request({
+    hostname: 'api.github.com',
+    path: `/repos/${owner}/${repo}/actions/runs`,
+    method: 'GET',
 
-    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runs`);
-    const results = await resp.json();
-    core.setOutput('results', results)
+  }, res => {
+    res.on('data', d => {
+      core.setOutput('response', d);
+    })
+  }).end();
 
-    core.setOutput('status', 'SUCCESSING');
-    const payload = JSON.stringify(github.context.payload, undefined, 2)
-    console.log(`The event payload: ${payload}`);
-  } catch (error) {
-    core.setFailed(error.message);
-  }
+  req.on('error', error => {
+    throw new Error(error);
+  });
+
+  core.setOutput('status', 'SUCCESSING');
+  const payload = JSON.stringify(github.context.payload, undefined, 2)
+  console.log(`The event payload: ${payload}`);
+} catch (error) {
+  core.setFailed(error.message);
 }
-
-run();
