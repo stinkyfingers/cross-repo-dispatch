@@ -8,43 +8,45 @@ import (
 	"github.com/sethvargo/go-githubactions"
 )
 
-func main() {
-	user := githubactions.GetInput("user")
-	if user == "" {
-		githubactions.Fatalf("missing input 'user'")
-	}
-	owner := githubactions.GetInput("owner")
-	if owner == "" {
-		githubactions.Fatalf("missing input 'owner'")
-	}
-	repo := githubactions.GetInput("repo")
-	if repo == "" {
-		githubactions.Fatalf("missing input 'repo'")
-	}
-	sha := githubactions.GetInput("sha")
-	if sha == "" {
-		githubactions.Fatalf("missing input 'sha'")
-	}
-	pat := githubactions.GetInput("pat")
-	if pat == "" {
-		githubactions.Fatalf("missing input 'pat'")
-	}
-	githubactions.AddMask(pat)
-	action := githubactions.New()
-
-	wrr, err := getRuns(owner, repo, user, pat)
-	if err != nil {
-		action.Fatalf("error getting runs: %s", err.Error())
-	}
-	j, _ := json.Marshal(wrr)
-	action.SetOutput("status", string(j))
-}
-
+// WorkflowRunsResponse defines relevant fields from a github api /runs response
 type WorkflowRunsResponse struct {
 	WorkflowRuns []struct {
 		ID      int    `json:"id"`
 		JobsURL string `json:"jobs_url"`
+	} `json:"workflow_runs"`
+}
+
+func main() {
+	action := githubactions.New()
+	user := action.GetInput("user")
+	if user == "" {
+		action.Fatalf("missing input 'user'")
 	}
+	owner := action.GetInput("owner")
+	if owner == "" {
+		action.Fatalf("missing input 'owner'")
+	}
+	repo := action.GetInput("repo")
+	if repo == "" {
+		action.Fatalf("missing input 'repo'")
+	}
+	sha := action.GetInput("sha")
+	if sha == "" {
+		action.Fatalf("missing input 'sha'")
+	}
+	pat := action.GetInput("pat")
+	if pat == "" {
+		action.Fatalf("missing input 'pat'")
+	}
+	action.AddMask(pat)
+
+	wrr, err := getRuns(owner, repo, user, pat)
+	if err != nil {
+		action.Fatalf("error getting runs: %s", err.Error())
+		return
+	}
+	j, _ := json.Marshal(wrr)
+	action.SetOutput("status", string(j))
 }
 
 func getRuns(owner, repo, user, pat string) (*WorkflowRunsResponse, error) {
