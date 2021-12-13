@@ -9,6 +9,6 @@ func main() {
 	}
 	githubactions.AddMask(owner)
 	a := githubactions.New()
-	a.Setoutput("status", "BEST")
-	a.Setoutput("response", "RESP")
+	a.SetOutput("status", "BEST")
+	a.SetOutput("response", "RESP")
 }
