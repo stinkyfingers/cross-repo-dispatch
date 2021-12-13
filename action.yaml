@@ -17,5 +17,7 @@ outputs:
   status:
     description: 'workflow status'
 runs:
-  using: 'node12'
-  main: 'index.js'
+  # using: 'node12'
+  # main: 'index.js'
+  using: docker
+  image: Dockerfile 
