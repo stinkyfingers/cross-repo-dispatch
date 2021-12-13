@@ -1,0 +1,21 @@
+name: 'cross repo dispatch'
+description: 'Run a GHAction workflow in a different repository and get the output status'
+inputs:
+  owner:
+    description: 'target repo owner'
+    required: true
+  repo:
+    description: 'target repo'
+    required: true
+  pat:
+    description: 'target repo PAT'
+    required: true
+  sha:
+    description: 'target repo sha'
+    required: true
+outputs:
+  status:
+    description: 'workflow status'
+runs:
+  using: 'node12'
+  main: 'index.js'
