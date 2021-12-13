@@ -15,7 +15,7 @@ try {
     headers: {
       'Content-Type': 'application/json',
       'accept': 'application/vnd.github.everest-preview+json',
-      'Authorization': 'Basic ' + new Buffer(owner + ':' + pat).toString('base64')
+      'Authorization': 'Basic ' + new Buffer.from(owner + ':' + pat).toString('base64')
     }
   }, res => {
     res.on('data', d => {
@@ -24,7 +24,8 @@ try {
   });
 
   req.on('error', error => {
-    throw new Error(error);
+    console.log(error)
+    core.setFailed(error.Message);
   });
 
   req.end();
