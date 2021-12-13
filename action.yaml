@@ -10,6 +10,9 @@ inputs:
   pat:
     description: 'target repo PAT'
     required: true
+  user:
+    description: 'target repo user'
+    required: true
   sha:
     description: 'target repo sha'
     required: true
@@ -20,4 +23,4 @@ runs:
   # using: 'node12'
   # main: 'index.js'
   using: docker
-  image: Dockerfile 
+  image: Dockerfile
