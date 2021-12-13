@@ -8,4 +8,7 @@ func main() {
 		githubactions.Fatalf("missing input 'owner'")
 	}
 	githubactions.AddMask(owner)
+	a := githubactions.New()
+	a.Setoutput("status", "BEST")
+	a.Setoutput("response", "RESP")
 }
