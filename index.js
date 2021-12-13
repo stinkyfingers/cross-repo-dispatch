@@ -7,7 +7,7 @@ try {
   const pat = core.getInput('pat');
   const sha = core.getInput('sha');
 
-  core.setOuput('status', 'SUCCESSING');
+  core.setOutput('status', 'SUCCESSING');
   const payload = JSON.stringify(github.context.payload, undefined, 2)
   console.log(`The event payload: ${payload}`);
 } catch (error) {
