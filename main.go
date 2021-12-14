@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -45,7 +44,7 @@ type ClientPayload struct {
 
 var (
 	ErrWorkflowNotFound = errors.New("workflow not found")
-	ErrTimeout          = errors.New("timeout waiting for workflow to complete")
+	ErrTimeout          = errors.New("timeout")
 )
 
 func main() {
@@ -145,7 +144,7 @@ func retryFindWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRu
 		case <-done:
 			return 0, ErrTimeout
 		case <-ticker.C:
-			log.Print("searching for workflow run with step name ", name)
+			fmt.Println("searching for workflow run with step name ", name)
 			runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
 			if err == nil {
 				return runID, nil
