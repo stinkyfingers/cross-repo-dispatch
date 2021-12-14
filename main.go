@@ -197,7 +197,7 @@ func repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRe
 	if err != nil {
 		return err
 	}
-	req.URL.Query().Add("ref", testRepoRef)
+	// req.URL.Query().Add("ref", testRepoRef)
 	req.SetBasicAuth(user, pat)
 	req.Header.Set("accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
