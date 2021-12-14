@@ -13,8 +13,8 @@ inputs:
   user:
     description: 'target repo user'
     required: true
-  name:
-    description: 'unique step name to search for in jobs'
+  sha:
+    description: 'unique step name "sha" to search for in jobs'
     required: true
   workflow_status_retry_interval:
     description: 'interval to retry getting workflow status'
@@ -25,7 +25,8 @@ inputs:
     required: false
   max_runs:
     description: 'max number of runs (starting at most recent) back to check for matching step "name"'
-    required: true
+    required: false
+    default: 10
   event_type:
     description: 'event type label'
     required: true
@@ -36,7 +37,5 @@ outputs:
   status:
     description: 'workflow status'
 runs:
-  # using: 'node12'
-  # main: 'index.js'
   using: docker
   image: Dockerfile

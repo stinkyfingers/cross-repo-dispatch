@@ -48,7 +48,7 @@ var (
 )
 
 func main() {
-	fmt.Println("start")
+	fmt.Println("starting cross-repo-dispatch")
 	var err error
 	action := githubactions.New()
 
@@ -65,9 +65,9 @@ func main() {
 	if repo == "" {
 		action.Fatalf("missing input 'repo'")
 	}
-	name := action.GetInput("name")
-	if name == "" {
-		action.Fatalf("missing input 'name'")
+	sha := action.GetInput("sha")
+	if sha == "" {
+		action.Fatalf("missing input 'sha'")
 	}
 	pat := action.GetInput("pat")
 	if pat == "" {
@@ -109,13 +109,13 @@ func main() {
 
 	/* end inputs */
 
-	err = repositoryDispatch(owner, repo, user, pat, eventType, name, testRepoRef)
+	err = repositoryDispatch(owner, repo, user, pat, eventType, sha, testRepoRef)
 	if err != nil {
 		action.Fatalf("error running repository dispatch: %s", err.Error())
 		return
 	}
 
-	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, name, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
+	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, sha, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
@@ -125,7 +125,7 @@ func main() {
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
-func findWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns int) (int, error) {
+func findWorkflowRunWithStepName(owner, repo, user, pat, sha string, maxRuns int) (int, error) {
 	wrr, err := getRuns(owner, repo, user, pat)
 	if err != nil {
 		return 0, err
@@ -140,7 +140,7 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns in
 		}
 		for _, job := range rjr.Jobs {
 			for _, step := range job.Steps {
-				if step.Name == name {
+				if step.Name == sha {
 					return run.ID, nil
 				}
 			}
@@ -150,7 +150,7 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns in
 }
 
 // getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the Conclusion
-func getWorkflowRunConclusion(owner, repo, user, pat, name string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
+func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
 	fmt.Println("get workflow")
 	var runID int
 	var err error
@@ -170,7 +170,7 @@ func getWorkflowRunConclusion(owner, repo, user, pat, name string, maxRuns, work
 		case <-ticker.C:
 			fmt.Println("searching for completed workflow")
 			if runID == 0 {
-				runID, err = findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
+				runID, err = findWorkflowRunWithStepName(owner, repo, user, pat, sha, maxRuns)
 				if err != nil {
 					if err == ErrWorkflowNotFound {
 						continue
@@ -183,6 +183,7 @@ func getWorkflowRunConclusion(owner, repo, user, pat, name string, maxRuns, work
 			if err != nil {
 				return "", err
 			}
+			fmt.Println("status of run: ", run.Status)
 			if run.Status == "completed" {
 				return run.Conclusion, nil
 			}
@@ -192,11 +193,11 @@ func getWorkflowRunConclusion(owner, repo, user, pat, name string, maxRuns, work
 
 /* API Calls */
 
-func repositoryDispatch(owner, repo, user, pat, eventType, name, testRepoRef string) error {
+func repositoryDispatch(owner, repo, user, pat, eventType, sha, testRepoRef string) error {
 	rdp := &RepositoryDispatchRequest{
 		EventType: eventType,
 		ClientPayload: ClientPayload{
-			Sha: name,
+			Sha: sha,
 		},
 	}
 	j, err := json.Marshal(rdp)
