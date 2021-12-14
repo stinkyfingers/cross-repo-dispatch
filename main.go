@@ -114,7 +114,7 @@ func main() {
 		return
 	}
 
-	runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
+	runID, err := retryFindWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
@@ -126,6 +126,31 @@ func main() {
 	}
 	fmt.Println("STATUS: ", conclusion)
 	action.SetOutput("status", conclusion)
+}
+
+// retryFindWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
+func retryFindWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns, workflowStatusTimeout, workflowStatusRetryInterval int) (int, error) {
+	done := make(chan struct{})
+
+	time.AfterFunc(time.Second*time.Duration(workflowStatusTimeout), func() {
+		done <- struct{}{}
+	})
+
+	ticker := time.NewTicker(time.Second * time.Duration(workflowStatusRetryInterval))
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return 0, ErrTimeout
+		case <-ticker.C:
+			runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
+			if err != nil {
+				return 0, err
+			}
+			return runID, nil
+		}
+	}
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
