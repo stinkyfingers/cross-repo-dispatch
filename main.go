@@ -193,7 +193,7 @@ func repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRe
 	}
 	buf := bytes.NewBuffer(j)
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/dispatches", owner, repo), buf)
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.github.com/repos/%s/%s/dispatches", owner, repo), buf)
 	if err != nil {
 		return err
 	}
