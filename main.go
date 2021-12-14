@@ -91,11 +91,13 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string) (int, erro
 		if i == maxRuns {
 			break
 		}
+		fmt.Println("RUNID", run.ID)
 		rjr, err := getJob(owner, repo, user, pat, run.ID)
 		if err != nil {
 			return 0, err
 		}
 		for _, job := range rjr.Jobs {
+			fmt.Println("JOB", job.Steps)
 			for _, step := range job.Steps {
 				if step.Name == name {
 					return run.ID, nil
