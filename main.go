@@ -114,43 +114,13 @@ func main() {
 		return
 	}
 
-	runID, err := retryFindWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
-	if err != nil {
-		action.Fatalf("error finding workflow: %s", err.Error())
-		return
-	}
-	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, runID, workflowStatusRetryInterval, workflowStatusTimeout)
+	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, name, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
 	}
 	fmt.Println("STATUS: ", conclusion)
 	action.SetOutput("status", conclusion)
-}
-
-// retryFindWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
-func retryFindWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns, workflowStatusTimeout, workflowStatusRetryInterval int) (int, error) {
-	done := make(chan struct{})
-
-	time.AfterFunc(time.Second*time.Duration(workflowStatusTimeout), func() {
-		done <- struct{}{}
-	})
-
-	ticker := time.NewTicker(time.Second * time.Duration(workflowStatusRetryInterval))
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-done:
-			return 0, ErrTimeout
-		case <-ticker.C:
-			fmt.Println("searching for workflow run with step name ", name)
-			runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
-			if err == nil {
-				return runID, nil
-			}
-		}
-	}
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
@@ -179,7 +149,9 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns in
 }
 
 // getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the Conclusion
-func getWorkflowRunConclusion(owner, repo, user, pat string, runID, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
+func getWorkflowRunConclusion(owner, repo, user, pat, name string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
+	var runID int
+	var err error
 	done := make(chan struct{})
 
 	time.AfterFunc(time.Second*time.Duration(workflowStatusTimeout), func() {
@@ -194,6 +166,17 @@ func getWorkflowRunConclusion(owner, repo, user, pat string, runID, workflowStat
 		case <-done:
 			return "", ErrTimeout
 		case <-ticker.C:
+			fmt.Println("searching for completed workflow")
+			if runID == 0 {
+				runID, err = findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
+				if err != nil {
+					if err == ErrWorkflowNotFound {
+						continue
+					}
+					return "", err
+				}
+				fmt.Println("run id: ", runID)
+			}
 			run, err := getRun(owner, repo, user, pat, runID)
 			if err != nil {
 				return "", err
