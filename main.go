@@ -48,6 +48,7 @@ var (
 )
 
 func main() {
+	fmt.Println("start")
 	var err error
 	action := githubactions.New()
 
@@ -150,6 +151,7 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns in
 
 // getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the Conclusion
 func getWorkflowRunConclusion(owner, repo, user, pat, name string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
+	fmt.Println("get workflow")
 	var runID int
 	var err error
 	done := make(chan struct{})
