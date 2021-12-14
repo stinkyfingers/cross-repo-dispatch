@@ -13,8 +13,8 @@ inputs:
   user:
     description: 'target repo user'
     required: true
-  sha:
-    description: 'target repo sha'
+  name:
+    description: 'unique step name to search for in jobs'
     required: true
 outputs:
   status:
