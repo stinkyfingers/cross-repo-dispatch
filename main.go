@@ -101,10 +101,6 @@ func main() {
 	if owner == "" {
 		action.Fatalf("missing input 'event_type'")
 	}
-	clientPayload := action.GetInput("client_payload")
-	if clientPayload == "" {
-		action.Fatalf("missing input 'client_payload'")
-	}
 	testRepoRef := action.GetInput("test_repo_ref")
 	if testRepoRef == "" {
 		action.Fatalf("missing input 'test_repo_ref'")

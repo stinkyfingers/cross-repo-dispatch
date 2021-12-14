@@ -29,9 +29,6 @@ inputs:
   event_type:
     description: 'event type label'
     required: true
-  client_payload:
-    description: 'payload to pass to repository dispatch workflow'
-    required: true
   test_repo_ref:
     description: 'branch of test repo to use'
     required: true
