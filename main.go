@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -116,7 +117,7 @@ func main() {
 
 	runID, err := retryFindWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
-		action.Fatalf("error getting runs: %s", err.Error())
+		action.Fatalf("error finding workflow: %s", err.Error())
 		return
 	}
 	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, runID, workflowStatusRetryInterval, workflowStatusTimeout)
@@ -144,11 +145,11 @@ func retryFindWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRu
 		case <-done:
 			return 0, ErrTimeout
 		case <-ticker.C:
+			log.Print("searching for workflow run with step name ", name)
 			runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
-			if err != nil {
-				return 0, err
+			if err == nil {
+				return runID, nil
 			}
-			return runID, nil
 		}
 	}
 }
