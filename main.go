@@ -34,8 +34,12 @@ type RunJobsResponse struct {
 }
 
 type RepositoryDispatchRequest struct {
-	EventType     string `json:"event_type"`
-	ClientPayload string `json:"client_payload"`
+	EventType     string        `json:"event_type"`
+	ClientPayload ClientPayload `json:"client_payload"`
+}
+
+type ClientPayload struct {
+	Sha string `json:"sha"`
 }
 
 var (
@@ -108,7 +112,7 @@ func main() {
 
 	/* end inputs */
 
-	err = repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRepoRef)
+	err = repositoryDispatch(owner, repo, user, pat, eventType, name, testRepoRef)
 	if err != nil {
 		action.Fatalf("error running repository dispatch: %s", err.Error())
 		return
@@ -182,10 +186,12 @@ func getWorkflowRunConclusion(owner, repo, user, pat string, runID, workflowStat
 
 /* API Calls */
 
-func repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRepoRef string) error {
+func repositoryDispatch(owner, repo, user, pat, eventType, name, testRepoRef string) error {
 	rdp := &RepositoryDispatchRequest{
-		EventType:     eventType,
-		ClientPayload: clientPayload,
+		EventType: eventType,
+		ClientPayload: ClientPayload{
+			Sha: name,
+		},
 	}
 	j, err := json.Marshal(rdp)
 	if err != nil {
@@ -197,7 +203,7 @@ func repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRe
 	if err != nil {
 		return err
 	}
-	// req.URL.Query().Add("ref", testRepoRef)
+	req.URL.Query().Add("ref", testRepoRef)
 	req.SetBasicAuth(user, pat)
 	req.Header.Set("accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
