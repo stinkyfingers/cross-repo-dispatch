@@ -67,7 +67,7 @@ func main() {
 	}
 	action.AddMask(pat)
 
-	runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, action)
+	runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
@@ -77,11 +77,12 @@ func main() {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
 	}
+	fmt.Println("STATUS", conclusion)
 	action.SetOutput("status", conclusion)
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
-func findWorkflowRunWithStepName(owner, repo, user, pat, name string, action *githubactions.Action) (int, error) {
+func findWorkflowRunWithStepName(owner, repo, user, pat, name string) (int, error) {
 	maxRuns := 10 // TODO configure
 	wrr, err := getRuns(owner, repo, user, pat)
 	if err != nil {
@@ -92,14 +93,12 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string, action *gi
 			break
 		}
 		fmt.Println("RUNID", run.ID)
-		action.Infof("RUNID %d", run.ID)
 		rjr, err := getJob(owner, repo, user, pat, run.ID)
 		if err != nil {
 			return 0, err
 		}
 		for _, job := range rjr.Jobs {
 			fmt.Println("JOB", job.Steps)
-			action.Infof("JOB %v", job.Steps)
 			for _, step := range job.Steps {
 				if step.Name == name {
 					return run.ID, nil
