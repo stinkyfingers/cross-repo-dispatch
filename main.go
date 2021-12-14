@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/sethvargo/go-githubactions"
@@ -31,12 +33,10 @@ type RunJobsResponse struct {
 	} `json:"jobs"`
 }
 
-// type WorkflowDispatchRequest struct {
-// 	Ref    string `json:"ref"`
-// 	Inputs struct {
-// 		SHA string `json:"sha"`
-// 	} `json:"inputs"`
-// }
+type RepositoryDispatchRequest struct {
+	EventType     string `json:"event_type"`
+	ClientPayload string `json:"client_payload"`
+}
 
 var (
 	ErrWorkflowNotFound = errors.New("workflow not found")
@@ -44,7 +44,10 @@ var (
 )
 
 func main() {
+	var err error
 	action := githubactions.New()
+
+	/* inputs */
 	user := action.GetInput("user")
 	if user == "" {
 		action.Fatalf("missing input 'user'")
@@ -66,24 +69,67 @@ func main() {
 		action.Fatalf("missing input 'pat'")
 	}
 	action.AddMask(pat)
+	workflowStatusRetryInterval := 10 // default
+	workflowStatusRetryIntervalString := action.GetInput("workflow_status_retry_interval")
+	if workflowStatusRetryIntervalString != "" {
+		workflowStatusRetryInterval, err = strconv.Atoi(workflowStatusRetryIntervalString)
+		if err != nil {
+			action.Fatalf("workflow_status_retry_interval must be int: %s", err.Error())
+		}
+	}
+	workflowStatusTimeout := 600 // default
+	workflowStatusTimeoutString := action.GetInput("workflow_status_timeout")
+	if workflowStatusTimeoutString != "" {
+		workflowStatusTimeout, err = strconv.Atoi(workflowStatusTimeoutString)
+		if err != nil {
+			action.Fatalf("workflow_status_timeout must be int: %s", err.Error())
+		}
+	}
+	maxRuns := 10
+	maxRunsString := action.GetInput("max_runs")
+	if maxRunsString != "" {
+		maxRuns, err = strconv.Atoi(maxRunsString)
+		if err != nil {
+			action.Fatalf("max_runs must be int: %s", err.Error())
+		}
+	}
+	eventType := action.GetInput("event_type")
+	if owner == "" {
+		action.Fatalf("missing input 'event_type'")
+	}
+	clientPayload := action.GetInput("client_payload")
+	if clientPayload == "" {
+		action.Fatalf("missing input 'client_payload'")
+	}
+	testRepoRef := action.GetInput("test_repo_ref")
+	if testRepoRef == "" {
+		action.Fatalf("missing input 'test_repo_ref'")
+	}
 
-	runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name)
+	/* end inputs */
+
+	err = repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRepoRef)
+	if err != nil {
+		action.Fatalf("error running repository dispatch: %s", err.Error())
+		return
+	}
+
+	runID, err := findWorkflowRunWithStepName(owner, repo, user, pat, name, maxRuns)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
 	}
-	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, runID)
+	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, runID, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
 	}
-	fmt.Println("STATUS", conclusion)
+	fmt.Println("STATUS: ", conclusion)
 	action.SetOutput("status", conclusion)
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
-func findWorkflowRunWithStepName(owner, repo, user, pat, name string) (int, error) {
-	maxRuns := 10 // TODO configure
+func findWorkflowRunWithStepName(owner, repo, user, pat, name string, maxRuns int) (int, error) {
 	wrr, err := getRuns(owner, repo, user, pat)
 	if err != nil {
 		return 0, err
@@ -92,13 +138,11 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string) (int, erro
 		if i == maxRuns {
 			break
 		}
-		fmt.Println("RUNID", run.ID)
 		rjr, err := getJob(owner, repo, user, pat, run.ID)
 		if err != nil {
 			return 0, err
 		}
 		for _, job := range rjr.Jobs {
-			fmt.Println("JOB", job.Steps)
 			for _, step := range job.Steps {
 				if step.Name == name {
 					return run.ID, nil
@@ -110,16 +154,14 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, name string) (int, erro
 }
 
 // getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the Conclusion
-func getWorkflowRunConclusion(owner, repo, user, pat string, runID int) (string, error) {
-	waitSeconds := 10     // TODO configure
-	timeoutSeconds := 600 // TODO configure
+func getWorkflowRunConclusion(owner, repo, user, pat string, runID, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
 	done := make(chan struct{})
 
-	time.AfterFunc(time.Second*time.Duration(timeoutSeconds), func() {
+	time.AfterFunc(time.Second*time.Duration(workflowStatusTimeout), func() {
 		done <- struct{}{}
 	})
 
-	ticker := time.NewTicker(time.Second * time.Duration(waitSeconds))
+	ticker := time.NewTicker(time.Second * time.Duration(workflowStatusRetryInterval))
 	defer ticker.Stop()
 
 	for {
@@ -140,25 +182,35 @@ func getWorkflowRunConclusion(owner, repo, user, pat string, runID int) (string,
 
 /* API Calls */
 
-// func repositoryDispatch(owner, repo, user, pat string) error {
-// 	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/dispatches", owner, repo), nil)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	req.URL.Query().Add("ref", "main") // TODO configure
-// 	req.SetBasicAuth(user, pat)
-// 	req.Header.Set("accept", "application/vnd.github.v3+json")
-// 	req.Header.Set("Content-Type", "application/json")
-// 	cli := &http.Client{}
-// 	resp, err := cli.Do(req)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if resp.StatusCode != http.StatusNoContent {
-// 		return fmt.Errorf("expected status 204, got %d", resp.StatusCode)
-// 	}
-// 	return nil
-// }
+func repositoryDispatch(owner, repo, user, pat, eventType, clientPayload, testRepoRef string) error {
+	rdp := &RepositoryDispatchRequest{
+		EventType:     eventType,
+		ClientPayload: clientPayload,
+	}
+	j, err := json.Marshal(rdp)
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(j)
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/dispatches", owner, repo), buf)
+	if err != nil {
+		return err
+	}
+	req.URL.Query().Add("ref", testRepoRef)
+	req.SetBasicAuth(user, pat)
+	req.Header.Set("accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+	cli := &http.Client{}
+	resp, err := cli.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("expected status 204, got %d", resp.StatusCode)
+	}
+	return nil
+}
 
 func getRun(owner, repo, user, pat string, runID int) (*WorkflowRun, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/runs/%d", owner, repo, runID), nil)

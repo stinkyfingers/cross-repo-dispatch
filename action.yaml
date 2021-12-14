@@ -16,6 +16,25 @@ inputs:
   name:
     description: 'unique step name to search for in jobs'
     required: true
+  workflow_status_retry_interval:
+    description: 'interval to retry getting workflow status'
+    required: false
+    default: 10
+  workflow_status_timeout:
+    description: 'timeout to fail getting workflow status'
+    required: false
+  max_runs:
+    description: 'max number of runs (starting at most recent) back to check for matching step "name"'
+    required: true
+  event_type:
+    description: 'event type label'
+    required: true
+  client_payload:
+    description: 'payload to pass to repository dispatch workflow'
+    required: true
+  test_repo_ref:
+    description: 'branch of test repo to use'
+    required: true
 outputs:
   status:
     description: 'workflow status'
