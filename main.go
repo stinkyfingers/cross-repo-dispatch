@@ -34,12 +34,8 @@ type RunJobsResponse struct {
 }
 
 type RepositoryDispatchRequest struct {
-	EventType     string        `json:"event_type"`
-	ClientPayload ClientPayload `json:"client_payload"`
-}
-
-type ClientPayload struct {
-	Sha string `json:"sha"`
+	EventType     string                 `json:"event_type"`
+	ClientPayload map[string]interface{} `json:"client_payload"`
 }
 
 var (
@@ -69,6 +65,7 @@ func main() {
 	if sha == "" {
 		action.Fatalf("missing input 'sha'")
 	}
+	clientPayload := action.GetInput("client_payload")
 	pat := action.GetInput("pat")
 	if pat == "" {
 		action.Fatalf("missing input 'pat'")
@@ -109,7 +106,7 @@ func main() {
 
 	/* end inputs */
 
-	err = repositoryDispatch(owner, repo, user, pat, eventType, sha, testRepoRef)
+	err = repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, testRepoRef)
 	if err != nil {
 		action.Fatalf("error running repository dispatch: %s", err.Error())
 		return
@@ -168,7 +165,7 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 		case <-done:
 			return "", ErrTimeout
 		case <-ticker.C:
-			fmt.Println("searching for completed workflow")
+			fmt.Println("searching for workflow with step named: ", sha)
 			if runID == 0 {
 				runID, err = findWorkflowRunWithStepName(owner, repo, user, pat, sha, maxRuns)
 				if err != nil {
@@ -193,12 +190,16 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 
 /* API Calls */
 
-func repositoryDispatch(owner, repo, user, pat, eventType, sha, testRepoRef string) error {
+func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, testRepoRef string) error {
+	payload := make(map[string]interface{})
+	err := json.Unmarshal([]byte(clientPayload), &payload)
+	if err != nil {
+		return err
+	}
+	payload["sha"] = sha
 	rdp := &RepositoryDispatchRequest{
-		EventType: eventType,
-		ClientPayload: ClientPayload{
-			Sha: sha,
-		},
+		EventType:     eventType,
+		ClientPayload: payload,
 	}
 	j, err := json.Marshal(rdp)
 	if err != nil {
