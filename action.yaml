@@ -7,8 +7,11 @@ inputs:
   repo:
     description: 'target repo'
     required: true
+  ref:
+    description: 'ref of target repo to use'
+    required: true
   pat:
-    description: 'target repo PAT'
+    description: 'target repo personal access token'
     required: true
   user:
     description: 'target repo user'
@@ -17,7 +20,7 @@ inputs:
     description: 'unique step name "sha" to search for in jobs'
     required: true
   client_payload:
-    description: 'data to send to the test job'
+    description: 'data to send to the workflow'
     required: false
   workflow_status_retry_interval:
     description: 'interval to retry getting workflow status'
@@ -26,15 +29,13 @@ inputs:
   workflow_status_timeout:
     description: 'timeout to fail getting workflow status'
     required: false
+    default: 600
   max_runs:
     description: 'max number of runs (starting at most recent) back to check for matching step "name"'
     required: false
     default: 10
   event_type:
     description: 'event type label'
-    required: true
-  test_repo_ref:
-    description: 'branch of test repo to use'
     required: true
 outputs:
   status:

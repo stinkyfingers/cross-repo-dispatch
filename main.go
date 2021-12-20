@@ -87,7 +87,7 @@ func main() {
 			action.Fatalf("workflow_status_timeout must be int: %s", err.Error())
 		}
 	}
-	maxRuns := 10
+	maxRuns := 10 // default
 	maxRunsString := action.GetInput("max_runs")
 	if maxRunsString != "" {
 		maxRuns, err = strconv.Atoi(maxRunsString)
@@ -99,14 +99,14 @@ func main() {
 	if owner == "" {
 		action.Fatalf("missing input 'event_type'")
 	}
-	testRepoRef := action.GetInput("test_repo_ref")
-	if testRepoRef == "" {
-		action.Fatalf("missing input 'test_repo_ref'")
+	ref := action.GetInput("ref")
+	if ref == "" {
+		action.Fatalf("missing input 'ref'")
 	}
 
 	/* end inputs */
 
-	err = repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, testRepoRef)
+	err = repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, ref)
 	if err != nil {
 		action.Fatalf("error running repository dispatch: %s", err.Error())
 		return
@@ -190,7 +190,7 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 
 /* API Calls */
 
-func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, testRepoRef string) error {
+func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, ref string) error {
 	payload := make(map[string]interface{})
 	err := json.Unmarshal([]byte(clientPayload), &payload)
 	if err != nil {
@@ -211,7 +211,7 @@ func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, t
 	if err != nil {
 		return err
 	}
-	req.URL.Query().Add("ref", testRepoRef)
+	req.URL.Query().Add("ref", ref)
 	req.SetBasicAuth(user, pat)
 	req.Header.Set("accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
