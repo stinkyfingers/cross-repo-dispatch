@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -221,7 +222,8 @@ func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, r
 		return err
 	}
 	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("expected status 204, got %d", resp.StatusCode)
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204, got %d; body: %s", resp.StatusCode, string(b))
 	}
 	return nil
 }
