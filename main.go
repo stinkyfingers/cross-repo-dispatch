@@ -207,8 +207,9 @@ func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, r
 		return err
 	}
 	buf := bytes.NewBuffer(j)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/dispatches", owner, repo)
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.github.com/repos/%s/%s/dispatches", owner, repo), buf)
+	req, err := http.NewRequest("POST", url, buf)
 	if err != nil {
 		return err
 	}
@@ -225,6 +226,7 @@ func repositoryDispatch(owner, repo, user, pat, eventType, sha, clientPayload, r
 		b, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("expected status 204, got %d; body: %s", resp.StatusCode, string(b))
 	}
+	fmt.Printf("url: %s\nstatus code: %d\nbody: %s\n", url, resp.StatusCode, buf.String())
 	return nil
 }
 
