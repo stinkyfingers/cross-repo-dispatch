@@ -11,7 +11,7 @@ jobs:
       - name: ${{ github.event.client_payload.sha }}
         run: echo "Running this test ${{ github.event.client_payload.sha }}"
 ```
-From your target repo, you can run the cross-repo-dispatch like:
+From your source repo, you can run the cross-repo-dispatch with a Github Action step like:
 
 ```
 - name: run test-in-another-repo
@@ -19,7 +19,7 @@ From your target repo, you can run the cross-repo-dispatch like:
 	uses: stinkyfingers/cross-repo-dispatch@v0.0
 	with:
 	  owner: 'my-repo-owner'
-	  repo: 'my-test-repo'
+	  repo: 'my-target-repo'
 	  ref: 'master'
 	  pat: ${{ secrets.SHIPA_GITHUB_TOKEN }}
 	  user: ${{ secrets.SHIPA_GITHUB_USERNAME }}
