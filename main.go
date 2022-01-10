@@ -21,6 +21,7 @@ type WorkflowRunsResponse struct {
 type WorkflowRun struct {
 	ID         int    `json:"id"`
 	JobsURL    string `json:"jobs_url"`
+	HTMLURL    string `json:"html_url"`
 	Status     string `json:"status"`     // “queued”, “in_progress”, or “completed”
 	Conclusion string `json:"conclusion"` // “success”, “failure”, “neutral”, “cancelled”, “skipped”, “timed_out”, or “action_required”
 }
@@ -113,13 +114,15 @@ func main() {
 		return
 	}
 
-	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, sha, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
+	run, err := getWorkflowRunConclusion(owner, repo, user, pat, sha, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
 	}
-	fmt.Println("STATUS: ", conclusion)
-	action.SetOutput("status", conclusion)
+	fmt.Println("STATUS: ", run.Status)
+	action.SetOutput("status", run.Status)
+	action.SetOutput("conclusion", run.Conclusion)
+	action.SetOutput("html_url", run.HTMLURL)
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
@@ -147,11 +150,12 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, sha string, maxRuns int
 	return 0, ErrWorkflowNotFound
 }
 
-// getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the Conclusion
-func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
+// getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the run
+func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (*WorkflowRun, error) {
 	fmt.Println("get workflow")
 	var runID int
 	var err error
+	var run *WorkflowRun
 	done := make(chan struct{})
 
 	time.AfterFunc(time.Second*time.Duration(workflowStatusTimeout), func() {
@@ -164,7 +168,7 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 	for {
 		select {
 		case <-done:
-			return "", ErrTimeout
+			return run, ErrTimeout
 		case <-ticker.C:
 			fmt.Println("searching for workflow with step named: ", sha)
 			if runID == 0 {
@@ -173,17 +177,17 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 					if err == ErrWorkflowNotFound {
 						continue
 					}
-					return "", err
+					return nil, err
 				}
 				fmt.Println("run id: ", runID)
 			}
-			run, err := getRun(owner, repo, user, pat, runID)
+			run, err = getRun(owner, repo, user, pat, runID)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			fmt.Println("status of run: ", run.Status)
 			if run.Status == "completed" {
-				return run.Conclusion, nil
+				return run, nil
 			}
 		}
 	}

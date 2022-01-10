@@ -40,6 +40,10 @@ inputs:
 outputs:
   status:
     description: 'workflow status'
+  conclusion:
+    description: 'workflow conclusion'
+  html_url:
+    description: 'html url of workflow'
 runs:
   using: docker
   image: Dockerfile
