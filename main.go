@@ -120,7 +120,8 @@ func main() {
 		return
 	}
 	fmt.Println("STATUS: ", run.Status)
-	action.SetOutput("status", run.Conclusion)
+	action.SetOutput("status", run.Status)
+	action.SetOutput("conclusion", run.Conclusion)
 	action.SetOutput("html_url", run.HTMLURL)
 }
 
