@@ -21,6 +21,7 @@ type WorkflowRunsResponse struct {
 type WorkflowRun struct {
 	ID         int    `json:"id"`
 	JobsURL    string `json:"jobs_url"`
+	HTMLURL    string `json:"html_url"`
 	Status     string `json:"status"`     // “queued”, “in_progress”, or “completed”
 	Conclusion string `json:"conclusion"` // “success”, “failure”, “neutral”, “cancelled”, “skipped”, “timed_out”, or “action_required”
 }
@@ -120,7 +121,7 @@ func main() {
 	}
 	fmt.Println("STATUS: ", conclusion)
 	action.SetOutput("status", conclusion.Status)
-	action.SetOutput("jobs_url", conclusion.JobsURL)
+	action.SetOutput("html_url", conclusion.HTMLURL)
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID

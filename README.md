@@ -73,6 +73,6 @@ From your source repo, you can run the cross-repo-dispatch with a Github Action 
 ```
   status:
     description: 'workflow status'
-  jobs_url:
-    description: 'url for workflow jobs'
+  html_url:
+    description: 'html url of workflow'
 ```
