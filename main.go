@@ -114,14 +114,14 @@ func main() {
 		return
 	}
 
-	conclusion, err := getWorkflowRunConclusion(owner, repo, user, pat, sha, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
+	run, err := getWorkflowRunConclusion(owner, repo, user, pat, sha, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout)
 	if err != nil {
 		action.Fatalf("error getting runs: %s", err.Error())
 		return
 	}
-	fmt.Println("STATUS: ", conclusion)
-	action.SetOutput("status", conclusion.Status)
-	action.SetOutput("html_url", conclusion.HTMLURL)
+	fmt.Println("STATUS: ", run.Status)
+	action.SetOutput("status", run.Conclusion)
+	action.SetOutput("html_url", run.HTMLURL)
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
