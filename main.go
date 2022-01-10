@@ -119,7 +119,8 @@ func main() {
 		return
 	}
 	fmt.Println("STATUS: ", conclusion)
-	action.SetOutput("status", conclusion)
+	action.SetOutput("status", conclusion.Status)
+	action.SetOutput("jobs_url", conclusion.JobsURL)
 }
 
 // findWorkflowRunWithStepName gets jobs for the last <maxRuns> runs and returns the workflow ID
@@ -147,11 +148,12 @@ func findWorkflowRunWithStepName(owner, repo, user, pat, sha string, maxRuns int
 	return 0, ErrWorkflowNotFound
 }
 
-// getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the Conclusion
-func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (string, error) {
+// getWorkflowRunConclusion retries getting a workflow by ID until the Status is "completed". It returns the run
+func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workflowStatusRetryInterval, workflowStatusTimeout int) (*WorkflowRun, error) {
 	fmt.Println("get workflow")
 	var runID int
 	var err error
+	var run *WorkflowRun
 	done := make(chan struct{})
 
 	time.AfterFunc(time.Second*time.Duration(workflowStatusTimeout), func() {
@@ -164,7 +166,7 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 	for {
 		select {
 		case <-done:
-			return "", ErrTimeout
+			return run, ErrTimeout
 		case <-ticker.C:
 			fmt.Println("searching for workflow with step named: ", sha)
 			if runID == 0 {
@@ -173,17 +175,17 @@ func getWorkflowRunConclusion(owner, repo, user, pat, sha string, maxRuns, workf
 					if err == ErrWorkflowNotFound {
 						continue
 					}
-					return "", err
+					return nil, err
 				}
 				fmt.Println("run id: ", runID)
 			}
-			run, err := getRun(owner, repo, user, pat, runID)
+			run, err = getRun(owner, repo, user, pat, runID)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			fmt.Println("status of run: ", run.Status)
 			if run.Status == "completed" {
-				return run.Conclusion, nil
+				return run, nil
 			}
 		}
 	}

@@ -40,6 +40,8 @@ inputs:
 outputs:
   status:
     description: 'workflow status'
+  jobs_url:
+    description: 'url of workflow jobs'
 runs:
   using: docker
   image: Dockerfile
